@@ -3,9 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
-using System.Windows;
 using System.Windows.Media.Imaging;
 using Clipboard = System.Windows.Forms.Clipboard;
 
@@ -18,62 +16,53 @@ internal static class ClipboardEx
         if (img == null)
             return;
 
-        var thread = new Thread((img) =>
+        var thread = new Thread(state =>
         {
-            if (img == null)
+            if (state is not BitmapSource image)
                 return;
 
-            var image = (BitmapSource)img;
+            try { Clipboard.Clear(); } catch { }
 
             try
             {
-                Clipboard.Clear();
-            }
-            catch (ExternalException) { }
-
-            try
-            {
-                // BitmapFrameDecode or BitmapFrame may need to be converted to
-                // a standard format of BitmapSource to ensure compatibility
-                // and only the frozen image is supported
                 if (image is BitmapFrame && image.IsFrozen)
                 {
                     image = new WriteableBitmap(image);
                 }
 
-                using var pngMemStream = new MemoryStream();
-                using var bitmap = image.Dispatcher?.Invoke(() => image.ToBitmap()) ?? image.ToBitmap();
-                var data = new DataObject();
+                using var bitmap = image.ToBitmap();
+                var data = new System.Windows.Forms.DataObject();
 
-                bitmap.Save(pngMemStream, ImageFormat.Png);
-                data.SetData("PNG", pngMemStream, false);
+                // 标准位图，给微信/QQ/钉钉用
+                data.SetData(DataFormats.Bitmap, bitmap);
+
+                // PNG 流，给 Word/浏览器用
+                using var pngStream = new MemoryStream();
+                bitmap.Save(pngStream, ImageFormat.Png);
+                data.SetData("PNG", pngStream, false);
 
                 Clipboard.SetDataObject(data, true);
             }
             catch (Exception e)
             {
-                // Clipboard competition leading to failure is common
-                // There is currently no UI notification of success or failure
                 Debug.WriteLine(e);
             }
         })
         {
-            Name = nameof(ClipboardEx),
+            Name = nameof(ClipboardEx)
         };
+
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start(img);
     }
 
     private static Bitmap ToBitmap(this BitmapSource source)
     {
-        using (var outStream = new MemoryStream())
-        {
-            BitmapEncoder enc = new PngBitmapEncoder();
-            enc.Frames.Add(BitmapFrame.Create(source));
-            enc.Save(outStream);
-            var bitmap = new Bitmap(outStream);
-
-            return new Bitmap(bitmap);
-        }
+        using var outStream = new MemoryStream();
+        BitmapEncoder enc = new PngBitmapEncoder();
+        enc.Frames.Add(BitmapFrame.Create(source));
+        enc.Save(outStream);
+        using var temp = new Bitmap(outStream);
+        return new Bitmap(temp);
     }
 }
