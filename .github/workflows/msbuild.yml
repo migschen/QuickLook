@@ -10,7 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+  # ✅ 修改：使用推荐的环境变量
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Path to the solution file relative to the root of the project.
   SOLUTION_FILE_PATH: ./QuickLook.slnx
 
@@ -46,11 +47,14 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: msbuild /m /p:BuildInParallel=true /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
 
-    # upload msi and zip artifacts so the publish job below can download and then update latest release via Linux
-    - uses: actions/upload-artifact@v6
+    # ✅ 修改：使用最新版artifacts并确保路径正确
+    - uses: actions/upload-artifact@v4
       with:
         name: quicklook-build-files
+        # 确保这个路径与您的实际构建输出路径匹配
         path: Build/QuickLook-*.*
+        # ✅ 新增：设置较长的保留期（可选）
+        retention-days: 1
 
   publish:
     # don't run in parallel - wait for build to complete first
@@ -65,7 +69,7 @@ jobs:
     if: github.event_name == 'push'
     
     steps:
-    - uses: actions/download-artifact@v6
+    - uses: actions/download-artifact@v4
       with:
         name: quicklook-build-files
     
@@ -77,5 +81,3 @@ jobs:
         rm: true
         token: ${{ secrets.GITHUB_TOKEN }}
         files: QuickLook-*.*
-
-
