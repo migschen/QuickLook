@@ -10,8 +10,6 @@ on:
   workflow_dispatch:
 
 env:
-  # ✅ 修改：使用推荐的环境变量
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Path to the solution file relative to the root of the project.
   SOLUTION_FILE_PATH: ./QuickLook.slnx
 
@@ -34,6 +32,13 @@ jobs:
         fetch-depth: 0
         ref: master
 
+    # 👇 👇 只在这里加了这一段，修复版本号错误
+    - name: Fix GitVersion.cs
+      shell: pwsh
+      run: |
+        "[assembly: AssemblyVersion("1.0.0.0")]
+        [assembly: AssemblyFileVersion("1.0.0.0")]" | Out-File GitVersion.cs -Encoding UTF8
+
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v3
 
@@ -47,20 +52,17 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: msbuild /m /p:BuildInParallel=true /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
 
-    # ✅ 修改：使用最新版artifacts并确保路径正确
-    - uses: actions/upload-artifact@v4
+    # upload msi and zip artifacts so the publish job below can download and then update latest release via Linux
+    - uses: actions/upload-artifact@v6
       with:
         name: quicklook-build-files
-        # 确保这个路径与您的实际构建输出路径匹配
         path: Build/QuickLook-*.*
-        # ✅ 新增：设置较长的保留期（可选）
-        retention-days: 1
 
   publish:
     # don't run in parallel - wait for build to complete first
     needs: build
     
-    # one of the steps uses container action which is Linux only
+    # one of the steps uses container action which uses Linux only
     runs-on: ubuntu-latest
     
     permissions: write-all
@@ -69,7 +71,7 @@ jobs:
     if: github.event_name == 'push'
     
     steps:
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v6
       with:
         name: quicklook-build-files
     
