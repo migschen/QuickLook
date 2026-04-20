@@ -31,14 +31,6 @@ jobs:
         submodules: recursive
         fetch-depth: 0
         ref: master
-    # ------------ 修复版本号报错（唯一改动点）------------
-    - name: Fix GitVersion.cs
-      shell: pwsh
-      run: |
-        echo '[assembly: AssemblyVersion("1.0.0.0")]' > GitVersion.cs
-        echo '[assembly: AssemblyFileVersion("1.0.0.0")]' >> GitVersion.cs
-    # -----------------------------------------------------
-
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v3
