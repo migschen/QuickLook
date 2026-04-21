@@ -38,13 +38,19 @@ internal static class ClipboardEx
                 // 显式使用完整命名空间，彻底避免与 WPF 的 DataObject/DataFormats 冲突
                 var data = new System.Windows.Forms.DataObject();
 
-                // 给微信/QQ/钉钉用
+                // 标准位图格式 - 基本支持
                 data.SetData(System.Windows.Forms.DataFormats.Bitmap, clipboardBitmap);
 
-                // 给 Word/浏览器用
+                // DIB 格式 - 支持更多应用程序，如微信、QQ、画图等
+                using var dibStream = new MemoryStream();
+                SaveDib(originalBitmap, dibStream);
+                dibStream.Position = 0;
+                data.SetData(System.Windows.Forms.DataFormats.Dib, dibStream);
+
+                // PNG 格式 - 给 Word/浏览器用
                 using var pngStream = new MemoryStream();
                 originalBitmap.Save(pngStream, ImageFormat.Png);
-                
+                pngStream.Position = 0;
                 // 因为前面用了完整命名空间，这里的重载解析绝对不会错位
                 data.SetData("PNG", pngStream, false);
 
@@ -71,5 +77,56 @@ internal static class ClipboardEx
         enc.Save(outStream);
         using var temp = new Bitmap(outStream);
         return new Bitmap(temp);
+    }
+
+    private static void SaveDib(Bitmap bitmap, Stream stream)
+    {
+        // 保存为 DIB 格式
+        var bmi = bitmap.GetBitmapHeaderInfo();
+        var data = bitmap.LockBits(new Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.ImageLockMode.ReadOnly, bitmap.PixelFormat);
+        
+        try
+        {
+            // 写入 BITMAPINFOHEADER
+            stream.Write(bmi, 0, bmi.Length);
+            
+            // 写入像素数据
+            var bytes = new byte[data.Stride * data.Height];
+            System.Runtime.InteropServices.Marshal.Copy(data.Scan0, bytes, 0, bytes.Length);
+            stream.Write(bytes, 0, bytes.Length);
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
+    }
+
+    private static byte[] GetBitmapHeaderInfo(this Bitmap bitmap)
+    {
+        var bmi = new System.Drawing.Imaging.BitmapInfoHeader();
+        bmi.Size = (uint)System.Runtime.InteropServices.Marshal.SizeOf(bmi);
+        bmi.Width = (int)bitmap.Width;
+        bmi.Height = (int)bitmap.Height;
+        bmi.Planes = 1;
+        bmi.BitCount = (ushort)(Image.GetPixelFormatSize(bitmap.PixelFormat));
+        bmi.Compression = 0; // BI_RGB
+        bmi.SizeImage = (uint)(bitmap.Width * bitmap.Height * (bmi.BitCount / 8));
+        bmi.XPelsPerMeter = 0;
+        bmi.YPelsPerMeter = 0;
+        bmi.ClrUsed = 0;
+        bmi.ClrImportant = 0;
+        
+        var result = new byte[bmi.Size];
+        var ptr = System.Runtime.InteropServices.Marshal.AllocHGlobal((int)bmi.Size);
+        try
+        {
+            System.Runtime.InteropServices.Marshal.StructureToPtr(bmi, ptr, false);
+            System.Runtime.InteropServices.Marshal.Copy(ptr, result, 0, (int)bmi.Size);
+        }
+        finally
+        {
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(ptr);
+        }
+        return result;
     }
 }
