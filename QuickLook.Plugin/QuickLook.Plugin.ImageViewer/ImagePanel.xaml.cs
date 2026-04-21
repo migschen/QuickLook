@@ -319,18 +319,20 @@ public partial class ImagePanel : UserControl, INotifyPropertyChanged, IDisposab
             if (_source is not null)
             {
                 ClipboardEx.SetClipboardImage(_source);
+                System.Windows.Forms.MessageBox.Show("已复制到剪贴板", "提示", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 return;
             }
 
             if (viewPanelImage.Source is BitmapSource bitmapSource)
             {
                 ClipboardEx.SetClipboardImage(bitmapSource);
+                System.Windows.Forms.MessageBox.Show("已复制到剪贴板", "提示", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 return;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            ///
+            System.Windows.Forms.MessageBox.Show($"复制失败: {ex.Message}", "错误", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
         }
     }
 
