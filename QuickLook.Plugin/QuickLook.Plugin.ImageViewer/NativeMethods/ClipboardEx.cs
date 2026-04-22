@@ -51,15 +51,25 @@ internal static class ClipboardEx
                 using var originalBitmap = image.ToBitmap();
 
                 var data = new DataObject();
+
+                // 添加 Bitmap 格式
                 data.SetData(DataFormats.Bitmap, (object)originalBitmap, true);
 
-
+                // 添加 DIB 格式
                 var dibData = CreateDibData(originalBitmap);
                 if (dibData != null)
                 {
                     data.SetData(DataFormats.Dib, dibData, true);
                 }
 
+                // 添加 PNG 格式
+                var pngData = CreatePngData(image);
+                if (pngData != null)
+                {
+                    data.SetData("PNG", pngData, true);
+                }
+
+                // 一次性设置所有格式
                 Clipboard.SetDataObject(data, true);
             }
             catch (Exception e)
@@ -73,6 +83,23 @@ internal static class ClipboardEx
 
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start(img);
+    }
+
+    private static byte[] CreatePngData(BitmapSource source)
+    {
+        try
+        {
+            using var stream = new MemoryStream();
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(source));
+            encoder.Save(stream);
+            return stream.ToArray();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+            return null;
+        }
     }
 
     private static byte[] CreateDibData(Bitmap bitmap)
