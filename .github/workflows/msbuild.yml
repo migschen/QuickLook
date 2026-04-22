@@ -47,7 +47,7 @@ jobs:
 
     # 在 build 任务的 steps 中，在构建完成后添加：
     - name: Package 7z and plugin
-      working-directory: ${{env.GITHUB_WORKSPACE}}\Scripts
+      working-directory: ${{env.GITHUB_WORKSPACE}}/Scripts
       run: |
         # 生成 7z 包
         powershell -ExecutionPolicy Bypass -file "pack-7z.ps1"
