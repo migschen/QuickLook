@@ -45,6 +45,15 @@ jobs:
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: msbuild /m /p:BuildInParallel=true /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
 
+    # 在 build 任务的 steps 中，在构建完成后添加：
+    - name: Package 7z and plugin
+      working-directory: ${{env.GITHUB_WORKSPACE}}\Scripts
+      run: |
+        # 生成 7z 包
+        powershell -ExecutionPolicy Bypass -file "pack-7z.ps1"
+        # 生成插件单独包
+        powershell -ExecutionPolicy Bypass -file "pack-plugin.ps1"
+
     # upload msi and zip artifacts so the publish job below can download and then update latest release via Linux
     - uses: actions/upload-artifact@v6
       with:
