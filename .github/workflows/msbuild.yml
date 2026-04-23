@@ -52,7 +52,7 @@ jobs:
         # 生成 7z 包
         powershell -ExecutionPolicy Bypass -File "pack-7z.ps1"
         # 生成插件单独包
-        powershell -ExecutionPolicy Bypass -File "pack-plugin.ps1"
+        # powershell -ExecutionPolicy Bypass -File "pack-plugin.ps1"
 
     # upload msi and zip artifacts so the publish job below can download and then update latest release via Linux
     - uses: actions/upload-artifact@v6
