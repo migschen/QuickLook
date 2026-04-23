@@ -1,4 +1,4 @@
-﻿// Copyright © 2017-2026 QL-Win Contributors
+// Copyright © 2017-2026 QL-Win Contributors
 //
 // This file is part of QuickLook program.
 //
@@ -55,6 +55,7 @@ public partial class ImagePanel : UserControl, INotifyPropertyChanged, IDisposab
     private bool _showZoomLevelInfo = true;
     private BitmapSource _source;
     private double _zoomFactor = 1d;
+    private string _originalFilePath;
 
     private bool _zoomToFit = true;
     private double _zoomToFitFactor;
@@ -265,6 +266,12 @@ public partial class ImagePanel : UserControl, INotifyPropertyChanged, IDisposab
         set
         {
             _imageSource = value;
+            
+            // 从 Uri 中提取原始文件路径
+            if (value != null && value.IsFile)
+            {
+                _originalFilePath = value.LocalPath;
+            }
 
             OnPropertyChanged();
         }
@@ -316,6 +323,17 @@ public partial class ImagePanel : UserControl, INotifyPropertyChanged, IDisposab
     {
         try
         {
+            // 优先复制原始文件
+            if (!string.IsNullOrEmpty(_originalFilePath) && File.Exists(_originalFilePath))
+            {
+                var data = new System.Windows.Forms.DataObject();
+                data.SetData(System.Windows.Forms.DataFormats.FileDrop, new string[] { _originalFilePath });
+                System.Windows.Forms.Clipboard.SetDataObject(data, true);
+                System.Windows.Forms.MessageBox.Show("已复制原始文件到剪贴板", "提示", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                return;
+            }
+
+            // 如果没有原始文件路径，回退到复制图片
             if (_source is not null)
             {
                 ClipboardEx.SetClipboardImage(_source);
