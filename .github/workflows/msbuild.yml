@@ -3,10 +3,9 @@
 name: build
 
 on:
-  # push:
-  #   branches: [ "master" ]
-  # pull_request:
-  #   branches: [ "master" ]
+  push:
+    tags:
+      - '*'
   workflow_dispatch:
 
 env:
